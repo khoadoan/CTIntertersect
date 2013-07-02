@@ -1,0 +1,57 @@
+ant:
+<ant>
+  <mkdir dir="/home/khoa/trmm-cs-local/operation/dist/intersect/distrib" />
+  <mkdir dir="/home/khoa/trmm-cs-local/operation/dist/intersect/src" />
+</ant>
+mcc -o intersect -W main:intersect -T link:exe -d /home/khoa/trmm-cs-local/operation/dist/intersect/src -w enable:specified_file_mismatch -w enable:repeated_file -w enable:switch_ignored -w enable:missing_lib_sentinel -w enable:demo_license -v /home/khoa/trmm-cs-local/operation/matlab/intersect.m 
+Compiler version: 4.13 (R2010a) 
+Processing include files...
+2 item(s) added.
+Processing directories installed with MCR...
+The file /home/khoa/trmm-cs-local/operation/dist/intersect/src/mccExcludedFiles.log contains a list of functions excluded from the CTF archive.
+0 item(s) added.
+Generating MATLAB path for the compiled application...
+Created 37 path items.
+Begin validation of MEX files: Wed Sep 19 17:19:16 2012 
+End validation of MEX files: Wed Sep 19 17:19:16 2012 
+Parsing file "/home/khoa/trmm-cs-local/operation/matlab/intersect.m"
+	(Referenced from: "Compiler Command Line"). 
+Parsing file "/usr/matlab/toolbox/compiler/deploy/deployprint.m"
+	(Referenced from: "Compiler Command Line"). 
+Parsing file "/usr/matlab/toolbox/compiler/deploy/printdlg.m"
+	(Referenced from: "Compiler Command Line"). 
+Deleting 0 temporary MEX authorization files. 
+Generating file "/home/khoa/trmm-cs-local/operation/dist/intersect/src/intersect_main.c". 
+Generating file "/home/khoa/trmm-cs-local/operation/dist/intersect/src/run_intersect.sh". 
+Generating file "/home/khoa/trmm-cs-local/operation/dist/intersect/src/readme.txt". 
+Generating file "/home/khoa/trmm-cs-local/operation/dist/intersect/src/intersect_mcc_component_data.c". 
+Executing command: "/usr/matlab/bin/mbuild"  -O -v -output "intersect" -I"/home/khoa/trmm-cs-local/operation/dist/intersect/src" "/home/khoa/trmm-cs-local/operation/dist/intersect/src/intersect_main.c" "/home/khoa/trmm-cs-local/operation/dist/intersect/src/intersect_mcc_component_data.c" -link exe -outdir "/home/khoa/trmm-cs-local/operation/dist/intersect/src" 
+Warning: You are using gcc version "4.3.4".  The version
+         currently supported with MATLAB Compiler is "4.2.3".
+         For a list of currently supported compilers see: 
+         http://www.mathworks.com/support/compilers/current_release/
+----------------------------------------------------------------
+-> mbuildopts.sh sourced from directory (DIR = $TMW_ROOT/bin)
+   FILE = /usr/matlab/bin/mbuildopts.sh
+----------------------------------------------------------------
+->    TMW_ROOT              = /usr/matlab
+->    CC                    = gcc
+->    CC flags:
+         CFLAGS             = -ansi -D_GNU_SOURCE -I/usr/matlab/extern/include -DUNIX -DX11 -pthread
+         CDEBUGFLAGS        = -g
+         COPTIMFLAGS        = -O -DNDEBUG
+         CLIBS              = -Wl,-rpath-link,/usr/matlab/bin/glnxa64 -L/usr/matlab/runtime/glnxa64  -lmwmclmcrrt -lm
+         arguments          = 
+->    LD                    = gcc
+->    Link flags:
+         LDFLAGS            = -pthread
+         LDDEBUGFLAGS       = -g
+         LDOPTIMFLAGS       = -O
+         arguments          = 
+----------------------------------------------------------------
+-> gcc -c  -I/home/khoa/trmm-cs-local/operation/dist/intersect/src -ansi -D_GNU_SOURCE -I/usr/matlab/extern/include -DUNIX -DX11 -pthread  -O -DNDEBUG  "/home/khoa/trmm-cs-local/operation/dist/intersect/src/intersect_main.c" -o /home/khoa/trmm-cs-local/operation/dist/intersect/src/intersect_main.o
+-> gcc -c  -I/home/khoa/trmm-cs-local/operation/dist/intersect/src -ansi -D_GNU_SOURCE -I/usr/matlab/extern/include -DUNIX -DX11 -pthread  -O -DNDEBUG  "/home/khoa/trmm-cs-local/operation/dist/intersect/src/intersect_mcc_component_data.c" -o /home/khoa/trmm-cs-local/operation/dist/intersect/src/intersect_mcc_component_data.o
+-> gcc -O -pthread  -o /home/khoa/trmm-cs-local/operation/dist/intersect/src/intersect  /home/khoa/trmm-cs-local/operation/dist/intersect/src/intersect_main.o /home/khoa/trmm-cs-local/operation/dist/intersect/src/intersect_mcc_component_data.o -Wl,-rpath-link,/usr/matlab/bin/glnxa64 -L/usr/matlab/runtime/glnxa64  -lmwmclmcrrt -lm 
+copy '/home/khoa/trmm-cs-local/operation/dist/intersect/src/readme.txt' '/home/khoa/trmm-cs-local/operation/dist/intersect/distrib/readme.txt'
+copy '/home/khoa/trmm-cs-local/operation/dist/intersect/src/run_intersect.sh' '/home/khoa/trmm-cs-local/operation/dist/intersect/distrib/run_intersect.sh'
+copy '/home/khoa/trmm-cs-local/operation/dist/intersect/src/intersect' '/home/khoa/trmm-cs-local/operation/dist/intersect/distrib/intersect'

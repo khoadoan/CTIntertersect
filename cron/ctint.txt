@@ -1,0 +1,2 @@
+00 02 15 * * /Volumes/RAID2/CTInt/Code/Operation/src/bash/get_trmm_cron.sh
+00 02 25 * * /Volumes/RAID2/CTInt/Code/Operation/src/bash/get_cloudsat_cron.sh

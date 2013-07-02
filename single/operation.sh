@@ -1,0 +1,1 @@
+cd /home/kkuo/CTInt/Code/Operation/ctintapp/runCtint

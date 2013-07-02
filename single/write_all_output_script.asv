@@ -1,0 +1,362 @@
+    %trmm_1C21_dir = 'C:\school\data\trmm-2010-day-60\1C21\';
+    %trmm_2A25_dir = 'C:\school\data\trmm-2010-day-60\2A25\';
+    %trmm_2A23_dir = 'C:\school\data\trmm-2010-day-60\2A23\';
+    % TODO: This section will be either moved to the
+    % scanning above or implemented as a function
+    % Find the pairing for TRMM and CS in this intersection curtain
+    noOfIntersections = length(intersections);
+    
+    for iIndex = 1:noOfIntersections
+        % Prepare info for this intersection
+        intersection = intersections(iIndex);
+        
+        cs_file = intersection.cs_filename;
+        trmm_file = intersection.trmm_filename;
+        amsre_file = intersection.amsr_e_filename;
+        tmi_file = intersection.tmi_filename;
+        
+        curtain_indexes = intersection.curtain_indexes;
+        CPR_ICenter_Index = curtain_indexes(1,1);
+        PR_ICenter_Index = curtain_indexes(1,2);
+        curtain_pairs = curtain_indexes(2:size(curtain_indexes,1), :);
+        cs_curtain_length = size(curtain_pairs, 1);
+        
+        % Info from CS Filename -
+        % 2008304224420_13348_CS_2B-GEOPROF_GRANULE_P_R04_E02.hdf
+        cs_filename_extract_pattern = '(\d\d\d\d)(\d\d\d)(\d\d)(\d\d)(\d\d)_(\d\d\d\d\d)';
+        cs_filename_extract_tokens = regexp(cs_file, cs_filename_extract_pattern, 'tokens');
+        cs_filename_extract_tokens = cs_filename_extract_tokens{1,1};
+
+        % Info from TRMM Filename - 1C21.20100301.70015.7.hdf
+        trmm_filename_extract_pattern = '1C21\.(\d\d\d\d)(\d\d)(\d\d)\.(\d\d\d\d\d)';
+        trmm_filename_extract_tokens = regexp(trmm_file, trmm_filename_extract_pattern, 'tokens');
+        trmm_filename_extract_tokens = trmm_filename_extract_tokens{1,1};
+        
+        % Locations to Other TRMM Files for Contents
+        trmm_1C21_file = trmm_file;
+        trmm_2A23_file = regexprep(trmm_file, '1C21', '2A23');
+        trmm_2A25_file = regexprep(trmm_file, '1C21', '2A25');
+        
+        tmi_1B11_file = tmi_file;
+        tmi_2A12_file = regexprep(tmi_file, '1B11', '2A12');
+        
+        CPR_Geolocation_Fields = '/2B-GEOPROF/Geolocation Fields/';
+        CPR_Data_Fields = '/2B-GEOPROF/Data Fields/';
+        
+        %% FILENAME Construction
+        % Extraction of Basic Components for construction of Output Filename
+        % CPR Data
+        CPR_Time = h4vsread2mat(cs_file, CPR_Geolocation_Fields, 'Profile_time');
+        CPR_UTC_Start = h4vsread2mat(cs_file, CPR_Geolocation_Fields, 'UTC_start');
+        CPR_Latitude = h4vsread2mat(cs_file, CPR_Geolocation_Fields, 'Latitude');
+        CPR_Longitude = h4vsread2mat(cs_file, CPR_Geolocation_Fields, 'Longitude');
+        CPR_Curtain_Reflectivity = hdfread(cs_file, '/2B-GEOPROF/Data Fields/Radar_Reflectivity');
+        CPR_Curtain_Cloud_mask = hdfread(cs_file, '/2B-GEOPROF/Data Fields/CPR_Cloud_mask');
+        cs_scan_length = length(CPR_Time);
+        
+        % PR Data
+        PR_Latitude = hdfread(trmm_file, '/Swath/Latitude');
+        PR_Longitude = hdfread(trmm_file, '/Swath/Latitude');
+        PR_Reflectivity = hdfread(trmm_1C21_file, '/Swath/normalSample');
+        PR_Corrected_Z =  hdfread(trmm_2A25_file, '/Swath/correctZFactor');
+        PR_Rain_Rate = hdfread(trmm_2A25_file, '/Swath/rain');
+        PR_OS_Rain = hdfread(trmm_file, '/Swath/osRain');
+        
+        % Convert PR Time to CPR Centric time
+        PR_Time = trmm2csTime(trmm_file, str2num(cs_filename_extract_tokens{2}), CPR_UTC_Start); 
+        trmm_scan_length = length(PR_Time);
+        
+        % Context Scans of CS and TRMM
+        cs_curtain_range = curtain_pairs(1,1):curtain_pairs(cs_curtain_length,1);
+        cs_scan_context_range = max((curtain_pairs(1,1)-50), 1):min((curtain_pairs(cs_curtain_length,1)+50), cs_scan_length);
+        if curtain_pairs(1,2) > curtain_pairs(cs_curtain_length,2)
+            trmm_scan_context_range = min((curtain_pairs(1,2)+10), trmm_scan_length) :-1:max((curtain_pairs(cs_curtain_length,2)-10),1);
+        else
+            trmm_scan_context_range = max((curtain_pairs(1,2)-10), 1):1:min((curtain_pairs(cs_curtain_length,2)+10), trmm_scan_length);
+        end
+        
+        
+        CPR_Curtain_Reflectivity = CPR_Curtain_Reflectivity(cs_scan_context_range, :);
+        CPR_Curtain_Cloud_mask = CPR_Curtain_Cloud_mask(cs_scan_context_range, :);
+       
+        PR_Curtain_OS_Rain = PR_OS_Rain(trmm_curtain_range, :, :);
+        PR_Curtain_Latitude = zeros(cs_curtain_length, 1);
+        PR_Curtain_Longitude = zeros(cs_curtain_length, 1);
+        PR_Curtain_Time = zeros(cs_curtain_length, 1);
+        PR_Curtain_Reflectivity = zeros(cs_curtain_length, size(PR_Reflectivity, 3));
+        PR_Curtain_Corrected_Z = zeros(cs_curtain_length, size(PR_Corrected_Z, 3));
+        PR_Curtain_Rain_Rate = zeros(cs_curtain_length, size(PR_Rain_Rate, 3));
+        PR_Curtain_Scan_Indices = curtain_pairs(:, 2);
+        PR_Curtain_Ray_Indices = curtain_pairs(:, 3);
+        for i = 1:cs_curtain_length
+            PR_Curtain_Latitude(i,1) = PR_Latitude(curtain_pairs(i, 2), curtain_pairs(i, 3));
+            PR_Curtain_Longitude(i,1) = PR_Longitude(curtain_pairs(i, 2), curtain_pairs(i, 3));
+            PR_Curtain_Time(i,1) = PR_Time(curtain_pairs(i,2));
+            PR_Curtain_Reflectivity(i, :) = PR_Reflectivity(curtain_pairs(i, 2), curtain_pairs(i, 3), :);
+            PR_Curtain_Rain_Rate(i, :) = PR_Rain_Rate(curtain_pairs(i, 2), curtain_pairs(i, 3), :);
+            PR_Curtain_Corrected_Z(i, :) = PR_Corrected_Z(curtain_pairs(i, 2), curtain_pairs(i, 3), :);
+        end
+        
+        % Time
+        cs_center_time = CPR_Time(CPR_ICenter_Index) + CPR_UTC_Start;
+        cs_center_second = mod(cs_center_time, 60);
+        cs_center_minute = mod((cs_center_time - cs_center_second)/60, 60);
+        cs_center_hour = ((cs_center_time - cs_center_second)/60 - cs_center_minute)/60;
+        cs_center_time_str = time2str(cs_center_hour, cs_center_minute, round(cs_center_second));
+        
+        % Overpass Time
+        dt_num = CPR_Time(CPR_ICenter_Index) - PR_Time(PR_ICenter_Index);
+        filename_dt_num = round(dt_num/60);
+        if filename_dt_num > 0 % PR First
+            filename_dt = sprintf('%02d%s', filename_dt_num, 'T');
+        else % CPR First
+            filename_dt = sprintf('%02d%s', abs(filename_dt_num), 'C');
+        end
+
+        % CPR Lat and Lon at Center
+        if CPR_Latitude(CPR_ICenter_Index) > 0
+            LT = sprintf('%02d%s', round(CPR_Latitude(CPR_ICenter_Index)), 'N');
+        else
+            LT = sprintf('%03d%s', abs(round(CPR_Latitude(CPR_ICenter_Index))), 'S');
+        end
+        if CPR_Longitude(CPR_ICenter_Index) > 0
+            LG = sprintf('%02d%s', round(CPR_Longitude(CPR_ICenter_Index)), 'E');
+        else
+            LG = sprintf('%03d%s', abs(round(CPR_Longitude(CPR_ICenter_Index))), 'W');
+        end
+
+        % ABCDE section
+        % A TODO: missing sum(sum(sum(osRain == -32700)))
+        A = sum(sum(sum(PR_Curtain_OS_Rain ~= -32700)));
+        A = A/(size(PR_Curtain_OS_Rain, 1) * size(PR_Curtain_OS_Rain, 2) * size(PR_Curtain_OS_Rain, 3));
+        A = ceil(A/5);
+        if A <= 9
+            A = num2str(A);
+        else
+            A = 'a';
+        end
+        
+        % B
+        B = max(max(PR_Curtain_Rain_Rate));
+        B = ceil(B/5);
+        if B <= 9
+            B = num2str(B);
+        else
+            B = 'a';
+        end
+        
+        % C
+        C = max(max(CPR_Curtain_Reflectivity));
+        if C <= -20
+            C = '0';
+        elseif C <= -30
+            C = '1';
+        elseif C <= -20
+            C = '2';
+        elseif C <= -10
+            C = '3';
+        elseif C < 0
+            C = '4';
+        elseif C < 10
+            C = '5';
+        elseif C < 20
+            C = '6';
+        elseif C < 30
+            C = '7';
+        elseif C < 40    
+            C = '8';
+        else
+            C = '9';
+        end
+        
+        % D
+        D = max(max(PR_Curtain_Corrected_Z));
+        D = ceil(D / 8);
+        if D > 9
+            D = 'a';
+        else
+            D = num2str(D);
+        end
+        % E
+        E = sum(sum(logical(20 <= CPR_Curtain_Cloud_mask & CPR_Curtain_Cloud_mask <= 40))) / (size(CPR_Curtain_Cloud_mask,1) * size(CPR_Curtain_Cloud_mask,2));
+        E = ceil(E/0.1);
+        if E <= 9
+            E = num2str(E);
+        else
+            E = 'a';
+        end
+        % Final Filename    
+        cs_trmm_filename = sprintf('%s%s%s_%s_%s_%s_%s%s%s%s%s_%s_CS_%s_TR.hdf', ...
+            cs_filename_extract_tokens{1}, cs_filename_extract_tokens{2}, cs_center_time_str, filename_dt, LT, LG, A, B, C, D, E, ... 
+            cs_filename_extract_tokens{6}, trmm_filename_extract_tokens{4});
+        fprintf('%d. Filename = %s\n', iIndex ,cs_trmm_filename);
+        
+        
+        %% Write Output
+        %% WRITE SDS OUTPUT
+        % Open file for SD
+        cs_trmm_hdf_file = sprintf('%s%s', output_dir, cs_trmm_filename);
+        cs_trmm_hdf_id = hdfsd('start', cs_trmm_hdf_file, 'DFACC_CREATE');
+        
+        CPR_Curtain_Height = hdfread(cs_file, '/2B-GEOPROF/Geolocation Fields/Height');
+        CPR_Curtain_Height = CPR_Curtain_Height(cs_scan_context_range, :);
+        CPR_Curtain_Latitude = CPR_Latitude(cs_scan_context_range);
+        CPR_Curtain_Longitude = CPR_Longitude(cs_scan_context_range);
+        CPR_Curtain_Time = CPR_Time(cs_scan_context_range);
+        CPR_Curtain_Gaseous_Attenuation = hdfread(cs_file, '/2B-GEOPROF/Data Fields/Gaseous_Attenuation');
+        CPR_Curtain_Gaseous_Attenuation = CPR_Curtain_Gaseous_Attenuation(cs_scan_context_range, :);
+        
+        PR_Block_Latitude = PR_Latitude(trmm_scan_context_range, :);
+        PR_Block_Longitude = PR_Longitude(trmm_scan_context_range, :);
+        PR_Block_Time = PR_Time(1, trmm_scan_context_range)';
+        
+        [nray, nbin] = size(CPR_Curtain_Height);
+        
+        % PR 2A25 Content
+        PR_Block_Rain_Rate = get_block_PR(trmm_2A25_file, '/Swath/rain', trmm_scan_context_range);
+        PR_Block_Corrected_Z = get_block_PR(trmm_2A25_file, '/Swath/correctZFactor', trmm_scan_context_range);
+        PR_Block_Reflectivity = get_block_PR(trmm_1C21_file, '/Swath/normalSample', trmm_scan_context_range);      
+
+        write_sds(CPR_Curtain_Height, 'CPR Height', 'int16', cs_trmm_hdf_id);
+        write_sds(CPR_Curtain_Latitude, 'CPR Latitude', 'float', cs_trmm_hdf_id);
+        write_sds(CPR_Curtain_Longitude, 'CPR Longitude', 'float', cs_trmm_hdf_id);
+        write_sds(CPR_Curtain_Time, 'CPR Time', 'float', cs_trmm_hdf_id);
+        write_sds(CPR_Curtain_Reflectivity, 'CPR Reflectivity(GEOPROF)', 'int16', cs_trmm_hdf_id);
+        write_sds(CPR_Curtain_Cloud_mask, 'CPR Cloud_Mask(GEOPROF)', 'int8', cs_trmm_hdf_id);
+        write_sds(CPR_Curtain_Gaseous_Attenuation, 'CPR Gaseous_Attenuation(GEOPROF)', 'int16', cs_trmm_hdf_id);
+
+        write_sds(single(PR_Curtain_Latitude), 'PR Curtain Latitude', 'float', cs_trmm_hdf_id);
+        write_sds(single(PR_Curtain_Longitude), 'PR Curtain Longitude', 'float', cs_trmm_hdf_id);
+        write_sds(single(PR_Curtain_Longitude), 'PR Curtain Longitude', 'float', cs_trmm_hdf_id);
+        write_sds(single(PR_Curtain_Time), 'PR Curtain Time', 'float', cs_trmm_hdf_id);
+        write_sds(int16(PR_Curtain_Reflectivity), 'PR Reflectivity Curtain(1C21)', 'int16', cs_trmm_hdf_id);
+        write_sds(int16(PR_Curtain_Corrected_Z), 'PR Corrected Z Curtain(2A25)', 'int16', cs_trmm_hdf_id);
+        write_sds(int16(PR_Curtain_Rain_Rate), 'PR Rain Rate Curtain(2A25)', 'int16', cs_trmm_hdf_id);
+        write_sds(int32(PR_Curtain_Scan_Indices), 'PR Curtain Scan Indices', 'int32', cs_trmm_hdf_id);
+        write_sds(int32(PR_Curtain_Ray_Indices), 'PR Curtain Ray Indices', 'int32', cs_trmm_hdf_id);
+
+
+        write_sds(single(PR_Block_Latitude), 'PR Block Latitude', 'float', cs_trmm_hdf_id);
+        write_sds(single(PR_Block_Longitude), 'PR Block Longitude', 'float', cs_trmm_hdf_id);
+        write_sds(single(PR_Block_Time), 'PR Block Time', 'float', cs_trmm_hdf_id);
+        write_sds(int16(PR_Block_Reflectivity), 'PR Reflectivity Block(1C21)', 'int16', cs_trmm_hdf_id);
+        write_sds(int16(PR_Block_Rain_Rate), 'PR Rain Rate Block(2A25)', 'int16', cs_trmm_hdf_id);
+        write_sds(int16(PR_Block_Corrected_Z), 'PR Corrected Z Block(2A25)', 'int16', cs_trmm_hdf_id);
+
+        % Write 1C21 Content
+        write_sds(int16(get_block_PR(trmm_1C21_file, '/Swath/systemNoise', trmm_scan_context_range)), 'PR systemNoise(1C21)', 'int16', cs_trmm_hdf_id);
+        write_sds(int8(get_block_PR(trmm_1C21_file, '/Swath/sysNoiseWarnFlag', trmm_scan_context_range)), 'PR sysNoiseWarnFlag(1C21)', 'int8', cs_trmm_hdf_id);
+        write_sds(int8(get_block_PR(trmm_1C21_file, '/Swath/minEchoFlag', trmm_scan_context_range)), 'PR minEchoFlag(1C21)', 'int8', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_1C21_file, '/Swath/binStormHeight', trmm_scan_context_range)), 'PR binStormHeight(1C21)', 'int16', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_1C21_file, '/Swath/binEllipsoid', trmm_scan_context_range)), 'PR binEllipsoid(1C21)', 'int16', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_1C21_file, '/Swath/binClutterFreeBottom', trmm_scan_context_range)), 'PR binClutterFreeBottom(1C21)', 'int16', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_1C21_file, '/Swath/binDIDHmean', trmm_scan_context_range)), 'PR binDIDHmean(1C21)', 'int16', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_1C21_file, '/Swath/binDIDHtop', trmm_scan_context_range)), 'PR binDIDHtop(1C21)', 'int16', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_1C21_file, '/Swath/binDIDHbottom', trmm_scan_context_range)), 'PR binDIDHbottom(1C21)', 'int16', cs_trmm_hdf_id);
+        write_sds(single(get_block_PR(trmm_1C21_file, '/Swath/scLocalZenith', trmm_scan_context_range)), 'PR scLocalZenith(1C21)', 'float', cs_trmm_hdf_id);
+        write_sds(single(get_block_PR(trmm_1C21_file, '/Swath/scRange', trmm_scan_context_range)), 'PR scRange(1C21)', 'float', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_1C21_file, '/Swath/osBinStart', trmm_scan_context_range)), 'PR osBinStart(1C21)', 'int16', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_1C21_file, '/Swath/landOceanFlag', trmm_scan_context_range)), 'PR landOceanFlag(1C21)', 'int16', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_1C21_file, '/Swath/surfWarnFlag', trmm_scan_context_range)), 'PR surfWarnFlag(1C21)', 'int16', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_1C21_file, '/Swath/binSurfPeak', trmm_scan_context_range)), 'PR binSurfPeak(1C21)', 'int16', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_1C21_file, '/Swath/osSurf', trmm_scan_context_range)), 'PR osSurf(1C21)', 'int16', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_1C21_file, '/Swath/osRain', trmm_scan_context_range)), 'PR osRain(1C21)', 'int16', cs_trmm_hdf_id);
+
+        % Write 2A25 Content
+        write_sds(single(get_block_PR(trmm_2A25_file, '/Swath/scLocalZenith', trmm_scan_context_range)), 'PR scLocalZenith(2A25)', 'float', cs_trmm_hdf_id);
+        write_sds(int8(get_block_PR(trmm_2A25_file, '/Swath/reliab', trmm_scan_context_range)), 'PR reliab(2A25)', 'int8', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_2A25_file, '/Swath/attenParmAlpha', trmm_scan_context_range)), 'PR attenParmAlpha(2A25)', 'int16', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_2A25_file, '/Swath/attenParmBeta', trmm_scan_context_range)), 'PR attenParmBeta(2A25)', 'int16', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_2A25_file, '/Swath/parmNode', trmm_scan_context_range)), 'PR parmNode(2A25)', 'int16', cs_trmm_hdf_id);
+        write_sds(single(get_block_PR(trmm_2A25_file, '/Swath/precipWaterParmA', trmm_scan_context_range)), 'PR precipWaterParmA(2A25)', 'float', cs_trmm_hdf_id);
+        write_sds(single(get_block_PR(trmm_2A25_file, '/Swath/precipWaterParmB', trmm_scan_context_range)), 'PR precipWaterParmB(2A25)', 'float', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_2A25_file, '/Swath/ZRParmA', trmm_scan_context_range)), 'PR ZRParmA(2A25)', 'int16', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_2A25_file, '/Swath/ZRParmB', trmm_scan_context_range)), 'PR ZRParmB(2A25)', 'int16', cs_trmm_hdf_id);
+        write_sds(single(get_block_PR(trmm_2A25_file, '/Swath/zmmax', trmm_scan_context_range)), 'PR zmmax(2A25)', 'float', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_2A25_file, '/Swath/rainFlag', trmm_scan_context_range)), 'PR rainFlag(2A25)', 'int16', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_2A25_file, '/Swath/rangeBinNum', trmm_scan_context_range)), 'PR rangeBinNum(2A25)', 'int16', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_2A25_file, '/Swath/rainAve', trmm_scan_context_range)), 'PR rainAve(2A25)', 'int16', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_2A25_file, '/Swath/precipWaterSum', trmm_scan_context_range)), 'PR precipWaterSum(2A25)', 'int16', cs_trmm_hdf_id);
+        write_sds(single(get_block_PR(trmm_2A25_file, '/Swath/epsilon_0', trmm_scan_context_range)), 'PR epsilon_0(2A25)', 'float', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_2A25_file, '/Swath/method', trmm_scan_context_range)), 'PR method(2A25)', 'int16', cs_trmm_hdf_id);
+        write_sds(single(get_block_PR(trmm_2A25_file, '/Swath/epsilon', trmm_scan_context_range)), 'PR epsilon(2A25)', 'float', cs_trmm_hdf_id);
+        write_sds(single(get_block_PR(trmm_2A25_file, '/Swath/zeta', trmm_scan_context_range)), 'PR zeta(2A25)', 'float', cs_trmm_hdf_id);
+        write_sds(single(get_block_PR(trmm_2A25_file, '/Swath/zeta_mn', trmm_scan_context_range)), 'PR zeta_mn(2A25)', 'float', cs_trmm_hdf_id);
+        write_sds(single(get_block_PR(trmm_2A25_file, '/Swath/zeta_sd', trmm_scan_context_range)), 'PR zeta_sd(2A25)', 'float', cs_trmm_hdf_id);
+        write_sds(single(get_block_PR(trmm_2A25_file, '/Swath/sigmaZero', trmm_scan_context_range)), 'PR sigmaZero(2A25)', 'float', cs_trmm_hdf_id);
+        write_sds(single(get_block_PR(trmm_2A25_file, '/Swath/freezH', trmm_scan_context_range)), 'PR freezH(2A25)', 'float', cs_trmm_hdf_id);
+        write_sds(single(get_block_PR(trmm_2A25_file, '/Swath/nubfCorrectFactor', trmm_scan_context_range)), 'PR nubfCorrectFactor(2A25)', 'float', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_2A25_file, '/Swath/qualityFlag', trmm_scan_context_range)), 'PR qualityFlag(2A25)', 'int16', cs_trmm_hdf_id);
+        write_sds(single(get_block_PR(trmm_2A25_file, '/Swath/nearSurfRain', trmm_scan_context_range)), 'PR nearSurfRain(2A25)', 'float', cs_trmm_hdf_id);
+        write_sds(single(get_block_PR(trmm_2A25_file, '/Swath/nearSurfZ', trmm_scan_context_range)), 'PR nearSurfZ(2A25)', 'float', cs_trmm_hdf_id);
+        write_sds(single(get_block_PR(trmm_2A25_file, '/Swath/e_SurfRain', trmm_scan_context_range)), 'PR e_SurfRain(2A25)', 'float', cs_trmm_hdf_id);
+        write_sds(single(get_block_PR(trmm_2A25_file, '/Swath/pia', trmm_scan_context_range)), 'PR pia(2A25)', 'float', cs_trmm_hdf_id);
+        write_sds(single(get_block_PR(trmm_2A25_file, '/Swath/errorRain', trmm_scan_context_range)), 'PR errorRain(2A25)', 'float', cs_trmm_hdf_id);
+        write_sds(single(get_block_PR(trmm_2A25_file, '/Swath/spare', trmm_scan_context_range)), 'PR spare(2A25)', 'float', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_2A25_file, '/Swath/rainType', trmm_scan_context_range)), 'PR rainType(2A25)', 'int16', cs_trmm_hdf_id);
+
+        % Write 2A23 Content
+        write_sds(int8(get_block_PR(trmm_2A23_file, '/Swath/rainFlag', trmm_scan_context_range)), 'PR rainFlag(2A23)', 'int8', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_2A23_file, '/Swath/rainType', trmm_scan_context_range)), 'PR rainType(2A23)', 'int16', cs_trmm_hdf_id);
+        write_sds(int8(get_block_PR(trmm_2A23_file, '/Swath/shallowRain', trmm_scan_context_range)), 'PR shallowRain(2A23)', 'int8', cs_trmm_hdf_id);
+        write_sds(int8(get_block_PR(trmm_2A23_file, '/Swath/status', trmm_scan_context_range)), 'PR status(2A23)', 'int8', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_2A23_file, '/Swath/binBBpeak', trmm_scan_context_range)), 'PR binBBpeak(2A23)', 'int16', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_2A23_file, '/Swath/HBB', trmm_scan_context_range)), 'PR HBB(2A23)', 'int16', cs_trmm_hdf_id);
+        write_sds(single(get_block_PR(trmm_2A23_file, '/Swath/BBintensity', trmm_scan_context_range)), 'PR BBintensity(2A23)', 'float', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_2A23_file, '/Swath/freezH', trmm_scan_context_range)), 'PR freezH(2A23)', 'int16', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_2A23_file, '/Swath/stormH', trmm_scan_context_range)), 'PR stormH(2A23)', 'int16', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_2A23_file, '/Swath/spare', trmm_scan_context_range)), 'PR spare(2A23)', 'int16', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_2A23_file, '/Swath/BBboundary', trmm_scan_context_range)), 'PR BBboundary(2A23)', 'int16', cs_trmm_hdf_id);
+        write_sds(int16(get_block_PR(trmm_2A23_file, '/Swath/BBwidth', trmm_scan_context_range)), 'PR BBwidth(2A23)', 'int16', cs_trmm_hdf_id);
+        write_sds(int8(get_block_PR(trmm_2A23_file, '/Swath/BBstatus', trmm_scan_context_range)), 'PR BBstatus(2A23)', 'int8', cs_trmm_hdf_id);        
+        
+        status = hdfsd('end',cs_trmm_hdf_id);
+        if status == -1
+            error('error in endaccess to hdf file %s\n', cs_trmm_hdf_file);
+        end
+        
+
+        %% WRITE VDATA OUTPUT
+        % Read Geolocation Fields
+        vlist = h4vsmultiread2cells(cs_file, CPR_Geolocation_Fields, ...
+                {'TAI_start', 'Range_to_intercept'}, 1);
+        vlist = [vlist, h4vsmultiread2cells(cs_file, CPR_Geolocation_Fields, ...
+                           {'DEM_elevation'}, cs_curtain_range)];
+        vlist = [vlist, h4vsmultiread2cells(cs_file, CPR_Geolocation_Fields, ...
+                           {'Vertical_binsize', 'Pitch_offset', 'Roll_offset'}, 1)];
+        % Read Data Fields
+        vlist = [vlist, h4vsmultiread2cells(cs_file, '/2B-GEOPROF/Data Fields/', ...
+                           {'Data_quality', 'Data_status', 'Data_targetID', 'SurfaceHeightBin', 'SurfaceHeightBin_fraction'}, ...
+                            cs_curtain_range)];
+        h4vswrite(cs_trmm_hdf_file, vlist, 'write');
+        
+        % This is a dirty trick to reuse the function, since struct's name
+        % is similarly to variable's name
+        h4vs1write(cs_trmm_hdf_file, 'Sigma-Zero', h4vsread2mat(cs_file, '/2B-GEOPROF/Data Fields/', 'Sigma-Zero', cs_curtain_range), 'write');
+        vlist = h4vsmultiread2cells(cs_file, '/2B-GEOPROF/Data Fields/', ...
+                 {'MODIS_cloud_flag', 'MODIS_Cloud_Fraction', 'MODIS_scene_char', 'MODIS_scene_var', ...
+                 'CPR_Echo_Top', 'sem_NoiseFloor', 'sem_NoiseFloorVar', 'sem_NoiseGate', ...
+                 'Navigation_land_sea_flag', 'Clutter_reduction_flag'}, cs_curtain_range);
+        h4vswrite(cs_trmm_hdf_file, vlist, 'write');
+        
+        h4vs1write(cs_trmm_hdf_file, 'nray:2B-GEOPROF', nray, 'write');
+        h4vs1write(cs_trmm_hdf_file, 'nbin:2B-GEOPROF', nbin, 'write');
+        
+        vlist = h4sds1fields2cells(trmm_file, 'PR_CAL_COEF', '/pr_cal_coef/', {'transCoef', 'receptCoef'}); %TODO: missing fcifIOchar
+        vlist = [vlist, h4sds1fields2cells(trmm_file, 'RAY_HEADER', '/ray_header/', ...
+                                    {'rayStart', 'raySize', 'angle', 'startBinDist', 'rainThres1', 'rainThres2', ...
+                                    'transAntenna', 'recvAntenna', 'onewayAlongTrack', 'onewayCrossTrack', 'eqvWavelength', ...
+                                    'radarConst', 'prIntrDelay', 'rangeBinSize', 'logAveOffset', 'mainlobeEdge'})]; %TODO: missing sidelobeRange
+        vlist = [vlist, h4sds1fields2cells(trmm_file, 'pr_scan_status', '/Swath/scanStatus/', ...
+                                    {'missing', 'validity', 'qac', 'geoQuality', 'dataQuality', 'SCorientation', ...
+                                    'acsMode', 'yawUpdateS', 'prMode', 'prStatus1', 'prStatus2', ...
+                                    'FractionalGranuleNumber'})];
+        vlist = [vlist, h4sds1fields2cells(trmm_file, 'pr_navigation', '/Swath/navigation/', ...
+                                    {'scPosX', 'scPosY', 'scPosZ', 'scVelX', 'scVelY', 'scVelZ', ...
+                                    'scLat', 'scLon', 'scAlt', 'scAttRoll', 'scAttPitch', 'scAttYaw', ...
+                                    'greenHourAng'})]; %TODO 2nd from last missing SensorOrientationMatrix
+        vlist = [vlist, h4sds1fields2cells(trmm_file, 'powers', '/Swath/powers/', ...
+                                    {'radarTransPower', 'transPulseWidth'})];
+        h4vswrite(cs_trmm_hdf_file, vlist, 'write');
+        fprintf('ending exporting with status %i\n', status);
+    end

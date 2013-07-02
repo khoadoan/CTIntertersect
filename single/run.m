@@ -1,0 +1,1 @@
+intersect('C:/school/operation/data/', '2007', '2', '2', '0.25', '0.1', '300');
