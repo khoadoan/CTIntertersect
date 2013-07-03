@@ -87,7 +87,7 @@ if [ "$PROD" = "1C21" -o "$PROD" = "1B01" ] ; then
     DISC="disc3"
 fi
 
-for ((DOY=2; DOY<3; DOY++)) ; do
+for ((DOY=$JBGN; DOY<$JEND; DOY++)) ; do
 # Set destination directory.
 	DSTDIR=`printf '%s/TRMM/%s/%s/%03d/' "$CINTDATA" "$PROD" "$YEAR" "$DOY"`
 	printf "Destination Directory: %s\n" "$DSTDIR"
