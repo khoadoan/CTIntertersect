@@ -1,0 +1,12 @@
+function [ year, doy ] = parse_cloudsat_filename( filename )
+% Parse Cloudsat Filename to extract:
+%   year, day of year, hour, minute, second
+% Example: 2007001005141_03607_CS_2B-GEOPROF_GRANULE_P_R04_E02
+    pattern = '(\d\d\d\d)(\d\d\d)(\d\d)(\d\d)(\d\d)';
+    tokens = regexp(filename, pattern, 'tokens')
+    year = str2num(tokens{1,1}{1})
+    doy = str2num(token
+    % hh = str2num(tokens{1,1}{4});
+    % mm = str2num(tokens{1,1}{5});
+end
+

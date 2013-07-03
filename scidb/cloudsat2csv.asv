@@ -42,16 +42,16 @@ disp(new_filepath)
 UTC_start = hdfread(filepath, '2B-GEOPROF', 'Fields', 'UTC_start');
 Profile_time = hdfread(filepath, '2B-GEOPROF', 'Fields', 'Profile_time');
 
-latitude = scale_latlon(hdfread(filepath, '2B-GEOPROF', 'Fields', 'Latitude'));
-longitude = scale_latlon(hdfread(filepath, '2B-GEOPROF', 'Fields', 'Longitude'));
+latitude = hdfread(filepath, '2B-GEOPROF', 'Fields', 'Latitude');
+longitude = hdfread(filepath, '2B-GEOPROF', 'Fields', 'Longitude');
 t = UTC_start + Profile_time;
 height = hdfread(filepath, '2B-GEOPROF', 'Fields', 'Height');
 
-[year, dayOfYear, t] = get_time(year, dayOfYear, t);
-t = scale_time(t);
+[year, dayOfYear, t] = get
+
 % [xyz] = latlon2xyz(latitude, longitude, R);
 
-csvwrite_with_headers(new_filepath, [latitude; longitude; year; dayOfYear; t; height(:, 1)']', ...
+csvwrite_with_headers(new_filepath, [latitude, longitude, year, dayOfYear, t, height]', ...
                                  {'lat', 'lon', 'y', 'd', 't', 'height'});
 
 end

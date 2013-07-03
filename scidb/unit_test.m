@@ -1,0 +1,26 @@
+% Test parse_cloudsat_filename
+filename = '2007001005141_03607_CS_2B-GEOPROF_GRANULE_P_R04_E02.hdf';
+[year, doy] = parse_cloudsat_filename(filename);
+fprintf('Passed: %d \n', year == 2007 && doy == 1);
+
+% Test get time
+[y, d, t] = get_time(2007, 1, [1, 2, 3]);
+fprintf('Passed: %d \n', sum(y == 2007 & d == 1) == length(t));
+[y, d, t] = get_time(2007, 1, [86399, 86400, 86401]);
+fprintf('Passed: %d \n', sum(y == 2007 & ...
+                        d == [1, 2, 2] & ...
+                        t == [86399, 0, 1]) == length(t));
+[y, d, t] = get_time(2007, 365, [86399, 86400, 86401]);
+fprintf('Passed: %d \n', sum(y == [2007, 2008, 2008] & ...
+                        d == [365, 1, 1] & ...
+                        t == [86399, 0, 1]) == length(t));
+[y, d, t] = get_time(2008, 365, [86399, 86400, 86401]);
+fprintf('Passed: %d \n', sum(y == [2008, 2008, 2008] & ...
+                        d == [365, 366, 366] & ...
+                        t == [86399, 0, 1]) == length(t)); 
+[y, d, t] = get_time(2008, 366, [86399, 86400, 86401]);
+fprintf('Passed: %d \n', sum(y == [2008, 2009, 2009] & ...
+                        d == [366, 1, 1] & ...
+                        t == [86399, 0, 1]) == length(t));                     
+                    
+                 

@@ -1,0 +1,7 @@
+CREATE ARRAY CS_TEMP <latitude: double, longitude: double, time: double, Height: double> [i=0:*, 1000000,0];
+CREATE ARRAY CS <Height: double> [latitude=-9000:9000,10,2, longitude=-18000:18000,1000000,0,time=0:*,1000000,0];
+redimension_store(CS_TEMP, CS);
+LOAD CS_2B_GEOPROF FROM '/home/scidb/scidb/hdf4conversion/cs.scidb';
+
+\\Samples
+CREATE ARRAY A <x: double, err: double> [i=0:99,10,0,j=0:99,10,0]; 

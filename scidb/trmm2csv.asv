@@ -1,6 +1,6 @@
-function [ new_filepath ] = trmm2csv(src_dir, dest_dir, filename)
+function [ new_filepath ] = trmm2csv(src_dir, dest_dir, filename, d)
 
-% R = 6353000;
+R = 6353000;
 
 filepath = sprintf('%s/%s', src_dir, filename);
 disp(filepath);
@@ -29,25 +29,28 @@ disp(new_filepath)
 %                                  geolocation_sds(4).data),...
 %                                  {'latitude', 'longitude', 'time', 'systemNoise'});
 
-latitude = scale_latlon(hdfread(filepath, '/Swath/Latitude'));
-longitude = scale_latlon(hdfread(filepath, '/Swath/Longitude'));
+latitude = hdfread(filepath, '/Swath/Latitude');
+longitude = hdfread(filepath, '/Swath/Longitude');
 systemNoise = hdfread(filepath, '/Swath/systemNoise');
-year = hdfread(filepath, '/Swath/ScanTime/Year')';
-month = hdfread(filepath, '/Swath/ScanTime/Month')';
-dayOfMonth = hdfread(filepath, '/Swath/ScanTime/DayOfMonth')';
-hour = int64(hdfread(filepath, '/Swath/ScanTime/Hour'))';
-minute = int64(hdfread(filepath, '/Swath/ScanTime/Minute'))';
-second = int64(hdfread(filepath, '/Swath/ScanTime/Second'))';
+year = hdfread(filepath, '/Swath/ScanTime/Year');
+month = hdfread(filepath, '/Swath/ScanTime/Month');
+dayOfMonth = hdfread(filepath, '/Swath/ScanTime/DayOfMonth');
+hour = hdfread(filepath, '/Swath/ScanTime/Hour');
+minute = hdfread(filepath, '/Swath/ScanTime/Minute');
+second = hdfread(filepath, '/Swath/ScanTime/Second');
 
-dayOfYear = date2day(year, month, dayOfMonth);
-secondFromStartOfDay = int64(hour*3600 + minute*60 + second);
-[year, dayOfYear, time] = get_time(int64(year), dayOfYear, secondFromStartOfDay);
-time = scale_time(time);
+[m, n] = size(latitude);
+d = d * ones(m, 1);
+
+% data = zeros(m*n, 6);
+% for i=1:n
+%     data(m*(i-1)+1:m*i, :) = [latitude(:, i), longitude(:, i), ones(m, 1)*i, time_offset, scanTime_sec, systemNoise(:, i)];
+% end
 
 %xyz = latlon2xyz(latitude(:,25), longitude(:,25), R);
 
 
-csvwrite_with_headers(new_filepath, [latitude(:, 25), longitude(:, 25), year, dayOfYear, time, systemNoise(:, 25)],...
+csvwrite_with_headers(new_filepath, [xyz, d, t, systemNoise(:, 25)],...
                                  {'lat', 'lon', 'y', 'd', 't', 'systemNoise'});
 
 end

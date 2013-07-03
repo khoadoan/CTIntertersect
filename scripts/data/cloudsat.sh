@@ -92,12 +92,12 @@ DLVL="L${PROD:0:1}"
 # Change to the destination directory.
 cd $DSTDIR
 
-for ((DOY=1; DOY<2; DOY++)) ; do
+for ((DOY=$JBGN; DOY<$JEND; DOY++)) ; do
 # Set destination directory.
 	DSTDIR=`printf \
 		'%s/CloudSat/%s/%03d/%s' \
 		"$CINTDATA" "$YEAR" "$DOY" "$RELEASE"`
-	printf "Destination Directory: %s\n" "$DSTDIR"
+	printf "%d: Destination Directory: %s\n" "$DOY" "$DSTDIR"
 
 	# Create the destination directory if it doesn't exist.
 	if [ ! -e $DSTDIR ] ; then
