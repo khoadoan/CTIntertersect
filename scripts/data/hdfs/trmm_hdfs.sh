@@ -42,6 +42,9 @@ fi
 PROD=$1
 YEAR=$2
 MONTH=$3
+TMP=`pwd`
+
+echo "Intermediate directory is $TMP"
 
 # Figure out the days of the year for the starting day and ending day of
 # the requested month, since TRMM data is organized in day-of-the-year
@@ -90,31 +93,32 @@ if [ "$PROD" = "1C21" -o "$PROD" = "1B01" ] ; then
 fi
 
 for ((DOY=$JBGN; DOY<$JEND; DOY++)) ; do
-# Set destination directory.
+        # Set destination directory.
 	DSTDIR=`printf '%s/TRMM/%s/%s/%03d/' "$CINTDATA" "$PROD" "$YEAR" "$DOY"`
 	printf "Destination Directory: %s\n" "$DSTDIR"
 
 	# Create the destination directory if it doesn't exist.
-	if [ `hadoop fs -test -d "$DSTDIR"` -ne 0 ]; then
+	# if [ `hadoop fs -test -d "$DSTDIR"` -eq -1 ]; then
 	   hadoop fs -mkdir -p "$DSTDIR"
 	   echo "Creating  directory $DSTDIR in HDFS"
-    fi
+	# fi
 	
 	# Create TMP Directory to store HDFS File
-	TMP_DIR=`printf "./tmp/TRMM/%s/%s/%03d/" "$PROD" "$YEAR" "$DOY"`
+	TMP_DIR=`printf "%s/%s/%s/%03d/" "$TMP" "$PROD" "$YEAR" "$DOY"`
 	if [ ! -e $TMP_DIR ] ; then
 		/bin/mkdir -p "$TMP_DIR"
 	fi
 	cd $TMP_DIR
 	
 	# Set source.
+    SRCHOST="198.118.195.88"
     SRCDIR=`printf \
-    'ftp://%s.nascom.nasa.gov/data/s4pa/TRMM_%s/TRMM_%s/%4d/%03d/%s*.HDF.Z' \
-    "$DISC" "$DLVL" "$PROD" "$YEAR" "$DOY" "$PROD"`
+    'data/s4pa/TRMM_%s/TRMM_%s/%4d/%03d' \
+    "$DLVL" "$PROD" "$YEAR" "$DOY"`
 
     # Download the files of the day.
-    printf "Downloading %s\n" "$SRCDIR"
-    $NCFTP/ncftpget -V "$SRCDIR"
+    printf "Connecting to %s at %s\n" "$SRCDIR" "$SRCHOST"
+    /usr/local/bin/python "$CODEDIR/ftpget.py" "$SRCHOST" "$SRCDIR" "$TMP_DIR" "HDF.Z"
 	
 	# UnCompress the files if any
 	for COMPRSD in *.Z
