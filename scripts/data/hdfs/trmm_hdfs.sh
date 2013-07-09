@@ -95,11 +95,12 @@ fi
 for ((DOY=$JBGN; DOY<$JEND; DOY++)) ; do
         # Set destination directory.
 	DSTDIR=`printf '%s/TRMM/%s/%s/%03d/' "$CINTDATA" "$PROD" "$YEAR" "$DOY"`
+	cd "/"
 	printf "Destination Directory: %s\n" "$DSTDIR"
 
 	# Create the destination directory if it doesn't exist.
 	# if [ `hadoop fs -test -d "$DSTDIR"` -eq -1 ]; then
-	   hadoop fs -mkdir -p "$DSTDIR"
+	   hadoop fs -mkdir "$DSTDIR"
 	   echo "Creating  directory $DSTDIR in HDFS"
 	# fi
 	
@@ -121,18 +122,20 @@ for ((DOY=$JBGN; DOY<$JEND; DOY++)) ; do
     /usr/local/bin/python "$CODEDIR/ftpget.py" "$SRCHOST" "$SRCDIR" "$TMP_DIR" "HDF.Z"
 	
 	# UnCompress the files if any
-	for COMPRSD in *.Z
-    do
-		FINDEX=`expr length $COMPRSD - 2` 
-		FNAME=`expr substr $COMPRSD 1 $FINDEX`
-		printf "Extracting %s to %s\n" $COMPRSD $FNAME
-		gunzip -c $COMPRSD > $FNAME
-    done
+	#for COMPRSD in *.Z
+    #do
+#		FINDEX=`expr length $COMPRSD - 2` 
+#		FNAME=`expr substr $COMPRSD 1 $FINDEX`
+#		printf "Extracting %s to %s\n" $COMPRSD $FNAME
+#		gunzip -c $COMPRSD > $FNAME
+#    done
 	
 	# Put to HDFS
-	hadoop fs -put *.HDF "$DSTDIR"
+        echo "Uploading to HDFS at $DSTDIR"
+	hadoop fs -put *.Z "$DSTDIR"
 	
 	# Delete temp dir
+	echo "Remote local files"
 	/bin/rm -r -f $TMP_DIR
 done
 
