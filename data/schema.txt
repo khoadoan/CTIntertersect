@@ -7,3 +7,19 @@ create array trmm<noiseLevel:int64> [x=-6353000:6353000,1000,0,y=-6353000:635300
 
 
 create array trmm1<noiseLevel:int64> [x=-6353000:6353000,1000,0,y=-6353000:6353000,1000,0,z=-6353000:6353000,1000,0,d=0:*,1,0,t=0:*,100,0];
+
+drop array cst;
+drop array cs1;
+drop array cs;
+drop array trmmt;
+drop array trmm1;
+drop array trmm;
+
+create array cst<lat:int64,lon:int64,y:int64,d:int64,t:int64,height:int64>[i=0:*,10000,0];
+create array cs1<height:int64> [x=-6353000:6353000,1000,0,y=-6353000:6353000,1000,0,z=-6353000:6353000,1000,0,d=0:*,1,0,t=0:*,10000,0];
+create array cs<height:int64> [x=-6353000:6353000,1000,0,y=-6353000:6353000,1000,0,z=-6353000:6353000,1000,0,d=0:*,1,0,t=0:*,10000,0];
+
+
+create array trmmt<lat:int64,lon:int64,y:int64,d:int64,t:int64,noiseLevel:int64>[i=0:*,10000,0];
+create array trmm1<noiseLevel:int64> [lat=-900000:900000,10000,100,lon=-1800000:1800000,10000,100,y=1900:*,1,0,d=1:366,1,0,t=0:86400000,100000,0];
+create array trmm<noiseLevel:int64> [lat=-900000:900000,10000,100,lon=-1800000:1800000,10000,100,y=1900:*,1,0,d=1:366,1,0,t=0:86400000,100000,0];
