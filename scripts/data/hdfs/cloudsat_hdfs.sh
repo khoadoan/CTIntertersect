@@ -45,7 +45,7 @@ if [ $4 -gt 12 -o $3 -lt 1 ] ; then
 fi
 
 # Reassign command line arguments.
-PROD=$1
+PROD=$1 #2B-GEOPROF
 RELEASE=$2
 YEAR=$3
 MONTH=$4
