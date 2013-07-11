@@ -1,16 +1,20 @@
 #!/bin/bash
 
-
 # Read in the argument
 PROD=$1
-YEAR=$2
-MONTH=$3
+RELEASE=$2
+YEAR=$3
+MONTH=$4
+WORKING_DIR=$5
+CONVERT_SCRIPT_DIR=$6
+MATLAB_MCR_DIR=$7
+CINTDATA="/user/kdoan1/CInt/data"
 
 # Intialization
 
-WORKING_DIR_HDF="/gpfsm/dnb32/kdoan1/CINT/data/working/hdf"
-WORKING_DIR_CSV="/gpfsm/dnb32/kdoan1/CINT/data/working/csv"
-WORKING_DIR_SCIDB="/gpfsm/dnb32/kdoan1/CINT/data/working/scidb"
+WORKING_DIR_HDF="$WORKING_DIR/hdf"
+WORKING_DIR_CSV="$WORKING_DIR/csv"
+WORKING_DIR_SCIDB="$WORKING_DIR/scidb"
 
 if [ ! -e $WORKING_DIR_HDF ] ; then
     /bin/mkdir -p $WORKING_DIR_HDF
@@ -63,26 +67,46 @@ if [ $JEND -lt $JBGN ] ; then
 fi
 
 for ((DOY=$JBGN; DOY<$JEND; DOY++)); do
-    # Copy HDF files to Working directory
-    # TODO: to uncompress Z files into TEMP
-    HDFFILES=`printf \
-      '/discover/nobackup/kdoan1/CINT/data/TRMM/%s/%4d/%03d/*.hdf' \
-      "$PROD" "$YEAR" "$DOY"`
-    /bin/cp "$HDFFILES" "$WORKING_DIR_HDF"
+	HDFSFILES=`printf '%s/CloudSat/%s/%03d/%s/*.hdf.zip' "$CINTDATA" "$YEAR" "$DOY" "$RELEASE"`
     
-    # Convert HDF files to CSV
-    
+	# download hdf files from HDFS
+	cd "$WORKING_DIR_HDF"
+    hadoop fs -get "$HDFSFILES"
+	
+	# uncompress
+	for COMPRSD in *.hdf.zip
+    do
+		FINDEX=`expr length $COMPRSD - 4` 
+		HDFFNAME=`expr substr $COMPRSD 1 $FINDEX`
+		printf "Extracting %s to %s\n" $COMPRSD $HDFFNAME
+		unzip $COMPRSD
+	
+		# Convert hdf files to csv
+		"$CONVERT_SCRIPT_DIR/run_trmm.sh" "$MATLAB_MCR_DIR"
+		
+		FINDEX=`expr length $HDFFNAME - 4` 
+		FNAME=`expr substr $COMPRSD 1 $FINDEX`
+		
+		CSVFILE=`printf "%s/%s.csv" "$WORKING_DIR_CSV" "$FNAME"`
+		SCIDBFILE=`printf "%s/%s.scidb" "$WORKING_DIR_SCIDB" "$FNAME"`
+		
+		# Convert CSV files to Scidb
+		echo "...Processing $CSVFILE to $SCIDBFILE"
+		/opt/scidb/13.3/bin/csv2scidb -s 1 -p NNNNNN < $CSVFILE > $SCIDBFILE
+		echo "...Load to Temp"
+		/opt/scidb/13.3/bin/iquery -naq "load(cs_2b_geoprof_lidar_t, '$SCIDBFILE');"
+		echo "...Redimension"
+		/opt/scidb/13.3/bin/iquery -naq "redimension_store(cs_2b_geoprof_lidar_t,cs_2b_geoprof_lidar_i);"
+		echo "...Load to Target"
+		/opt/scidb/13.3/bin/iquery -naq "insert(cs_2b_geoprof_lidar_i, cs_2b_geoprof_lidar);"
+	
+		#Remove temporary files
+		echo "Remove $COMPRSD, $HDFFNAME, $CSVFILE, $SCIDBFILE"
+		/bin/rm -f "$COMPRSD"
+		/bin/rm -f "$HDFFNAME"
+		/bin/rm -f "$CSVFILE"
+		/bin/rm -f "$SCIDBFILE"
+    done
 
+    
 done
-
-
-
-
-
-# Convert CSV files to Scidb
-
-# Insert into 1-D array
-
-# Redimension into intermediate array
-
-# Update Target Array

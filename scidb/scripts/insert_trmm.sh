@@ -76,31 +76,36 @@ for ((DOY=$JBGN; DOY<$JEND; DOY++)); do
 	for COMPRSD in *.HDF.Z
     do
 		FINDEX=`expr length $COMPRSD - 2` 
+		HDFFNAME=`expr substr $COMPRSD 1 $FINDEX`
+		printf "Extracting %s to %s\n" $COMPRSD $HDFFNAME
+		gunzip -c $COMPRSD > $HDFFNAME
+	
+		# Convert hdf files to csv
+		"$CONVERT_SCRIPT_DIR/run_trmm.sh" "$MATLAB_MCR_DIR"
+		
+		FINDEX=`expr length $HDFFNAME - 4` 
 		FNAME=`expr substr $COMPRSD 1 $FINDEX`
-		printf "Extracting %s to %s\n" $COMPRSD $FNAME
-		gunzip -c $COMPRSD > $FNAME
+		
+		CSVFILE=`printf "%s/%s.csv" "$WORKING_DIR_CSV" "$FNAME"`
+		SCIDBFILE=`printf "%s/%s.scidb" "$WORKING_DIR_SCIDB" "$FNAME"`
+		
+		# Convert CSV files to Scidb
+		echo "...Processing $CSVFILE to $SCIDBFILE"
+		/opt/scidb/13.3/bin/csv2scidb -s 1 -p NNNNNN < $CSVFILE > $SCIDBFILE
+		echo "...Load to Temp"
+		/opt/scidb/13.3/bin/iquery -naq "load(trmm_1c21_t, '$SCIDBFILE');"
+		echo "...Redimension"
+		/opt/scidb/13.3/bin/iquery -naq "redimension_store(trmm_1c21_t,trmm_1c21_i);"
+		echo "...Load to Target"
+		/opt/scidb/13.3/bin/iquery -naq "insert(trmm_1c21_i, trmm_1c21);"
+	
+		#Remove temporary files
+		echo "Remove $COMPRSD, $HDFFNAME, $CSVFILE, $SCIDBFILE"
+		/bin/rm -f "$COMPRSD"
+		/bin/rm -f "$HDFFNAME"
+		/bin/rm -f "$CSVFILE"
+		/bin/rm -f "$SCIDBFILE"
     done
 
-    # Convert hdf files to csv
-	"$CONVERT_SCRIPT_DIR/run_cloudsat.sh" "$MATLAB_MCR_DIR"
     
-	# Convert CSV files to Scidb
-	for f in "$WORKING_DIR_CSV/*.csv"
-	do
-		bf=`basename $f`
-		nf=`printf "%s/%s.scidb" "$WORKING_DIR_SCIDB" "$bf"`
-		echo "...Processing $bf to $nf"
-		/opt/scidb/13.3/bin/csv2scidb -s 1 -p NNNNNN < $bf > $nf
-		echo "...Load to Temp"
-		/opt/scidb/13.3/bin/iquery -aq "load(trmmt, '$nf');"
-		echo "...Redimension"
-		/opt/scidb/13.3/bin/iquery -aq "redimension_store(trmmt,trmm1);"
-		echo "...Load to Target"
-		/opt/scidb/13.3/bin/iquery -aq "insert(trmm1, trmm);"
-	done
-	
-	#Remove temporary files
-	/bin/rm -r -f "$WORKING_DIR_HDF/*"
-	/bin/rm -r -f "$WORKING_DIR_CSV/*"
-	/bin/rm -r -f "$WORKING_DIR_SCIDB/*"
 done
