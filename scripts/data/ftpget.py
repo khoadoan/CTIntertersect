@@ -7,8 +7,15 @@ remote_dir = sys.argv[2];
 local_dir = sys.argv[3];
 ext = sys.argv[4];
 
+if len(sys.argv) == 7:
+    username = sys.argv[5]
+    password = sys.argv[6]
+else:
+    username = "anonymous"
+    password = "anonymous@"
+
 ftp = FTP(host)
-ftp.login()
+ftp.login(username, password)
 
 ftp.cwd(remote_dir)
 
