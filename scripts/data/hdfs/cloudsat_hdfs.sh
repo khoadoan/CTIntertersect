@@ -45,7 +45,7 @@ if [ $4 -gt 12 -o $3 -lt 1 ] ; then
 fi
 
 # Reassign command line arguments.
-PROD=$1 #2B-GEOPROF
+PROD=$1 #2B-GEOPROF - Using 2b-geoprof-lidar.p2 for now
 RELEASE=$2
 YEAR=$3
 MONTH=$4
@@ -100,14 +100,14 @@ for ((DOY=$JBGN; DOY<$JEND; DOY++)) ; do
 		"$CINTDATA" "$YEAR" "$DOY" "$RELEASE"`
 	
 	# Reset to Home Directory: This is used to prevent hadoop mkdir error
-	cd "~"
-	printf "%d: Destination Directory: %s\n" "$DOY" "$DSTDIR"
+	cd "/"
+	printf "%3d: Destination Directory: %s\n" "$DOY" "$DSTDIR"
 	
 	echo "Creating  directory $DSTDIR in HDFS"
 	hadoop fs -mkdir "$DSTDIR"
     
 	# Create TMP Directory to store HDFS File
-	TMP_DIR=`printf "%s/%s-%s-%03d/" "$TMP" "$YEAR" "$DOY" "$RELEASE"`
+	TMP_DIR=`printf "%s/%s-%03d-%s/" "$TMP" "$YEAR" "$DOY" "$RELEASE"`
 	if [ ! -e $TMP_DIR ] ; then
 		/bin/mkdir -p "$TMP_DIR"
 	fi
@@ -125,10 +125,10 @@ for ((DOY=$JBGN; DOY<$JEND; DOY++)) ; do
 	
 	# Put to HDFS
 	echo "Uploading to HDFS at $DSTDIR"
-	hadoop fs -put *.ZIP "$DSTDIR"
+	hadoop fs -put *.zip "$DSTDIR"
 	
 	# Delete temp dir
-	echo "Remote local files"
+	echo "Remove local files"
 	/bin/rm -r -f $TMP_DIR
 done
 
