@@ -5,21 +5,39 @@ create array trmmt<x:int64,y:int64,z:int64,d:int64,t:int64,noiseLevel:int64>[i=0
 create array trmm1<noiseLevel:int64> [x=-6353000:6353000,1000,0,y=-6353000:6353000,1000,0,z=-6353000:6353000,1000,0,d=0:*,1,0,t=0:*,10000,0];
 create array trmm<noiseLevel:int64> [x=-6353000:6353000,1000,0,y=-6353000:6353000,1000,0,z=-6353000:6353000,1000,0,d=0:*,1,0,t=0:*,10000,0];
 
+create array cs_2b_geoprof_lidar_t<lat:int64,lon:int64,y:int64,d:int64,t:int64,height:int64>[i=0:*,10000,0];
+create array cs_2b_geoprof_lidar_i<height:int64> [lat=-900000:900000,10000,100,lon=-1800000:1800000,10000,100,y=1900:*,1,0,d=1:366,1,0,t=0:86400000,100000,0];
+create array cs_2b_geoprof_lidar<height:int64> [lat=-900000:900000,10000,100,lon=-1800000:1800000,10000,100,y=1900:*,1,0,d=1:366,1,0,t=0:86400000,100000,0];
 
-create array trmm1<noiseLevel:int64> [x=-6353000:6353000,1000,0,y=-6353000:6353000,1000,0,z=-6353000:6353000,1000,0,d=0:*,1,0,t=0:*,100,0];
+create array trmm_1c21_t<lat:int64,lon:int64,y:int64,d:int64,t:int64,systemNoise:int64>[i=0:*,10000,0];
+create array trmm_1c21_i<systemNoise:int64> [lat=-900000:900000,10000,100,lon=-1800000:1800000,10000,100,y=1900:*,1,0,d=1:366,1,0,t=0:86400000,100000,0];
+create array trmm_1c21<systemNoise:int64> [lat=-900000:900000,10000,100,lon=-1800000:1800000,10000,100,y=1900:*,1,0,d=1:366,1,0,t=0:86400000,100000,0];
 
-drop array cst;
-drop array cs1;
-drop array cs;
-drop array trmmt;
-drop array trmm1;
-drop array trmm;
-
-create array cst<lat:int64,lon:int64,y:int64,d:int64,t:int64,height:int64>[i=0:*,10000,0];
-create array cs1<height:int64> [x=-6353000:6353000,1000,0,y=-6353000:6353000,1000,0,z=-6353000:6353000,1000,0,d=0:*,1,0,t=0:*,10000,0];
-create array cs<height:int64> [x=-6353000:6353000,1000,0,y=-6353000:6353000,1000,0,z=-6353000:6353000,1000,0,d=0:*,1,0,t=0:*,10000,0];
+remove(trmm_1c21_t);
+remove(trmm_1c21_i);
+remove(trmm_1c21);
 
 
-create array trmmt<lat:int64,lon:int64,y:int64,d:int64,t:int64,noiseLevel:int64>[i=0:*,10000,0];
-create array trmm1<noiseLevel:int64> [lat=-900000:900000,10000,100,lon=-1800000:1800000,10000,100,y=1900:*,1,0,d=1:366,1,0,t=0:86400000,100000,0];
-create array trmm<noiseLevel:int64> [lat=-900000:900000,10000,100,lon=-1800000:1800000,10000,100,y=1900:*,1,0,d=1:366,1,0,t=0:86400000,100000,0];
+create array cs_2b_geoprof_lidar_small<height:int64> [lat=-900000:900000,10,0,lon=-1800000:1800000,10,0,y=1900:*,1,0,d=1:366,1,0,t=0:86400000,100000,0];
+store(repart(cs_2b_geoprof_lidar, <height:int64> [lat=-900000:900000,10,0,lon=-1800000:1800000,10,0,y=1900:*,1,0,d=1:366,1,0,t=0:86400000,100000,0]),cs_2b_geoprof_lidar_small);
+create array trmm_1c21_small<systemNoise:int64> [lat=-900000:900000,10,0,lon=-1800000:1800000,10,0,y=1900:*,1,0,d=1:366,1,0,t=0:86400000,100000,0];
+store(repart(trmm_1c21, <height:int64> [lat=-900000:900000,10,0,lon=-1800000:1800000,10,0,y=1900:*,1,0,d=1:366,1,0,t=0:86400000,100000,0]),trmm_1c21_small);
+
+# Use just a couple days to test everything out first
+create array cs_2b_geoprof_lidar_i1<height:int64> [lat=-900000:900000,10000,100,lon=-1800000:1800000,10000,100,y=1900:*,1,0,d=1:366,1,0,t=0:86400000,100000,0];
+store(between(cs_2b_geoprof_lidar, -351239, -1800000, 2007, 1, 0, 351276, 1800000, 2007, 2, 86399000), cs_2b_geoprof_lidar_i1);
+create array cs_2b_geoprof_lidar_test1<height:int64> [lat=-900000:900000,10,0,lon=-1800000:1800000,10,0,y=1900:*,1,0,d=1:366,1,0,t=0:86400000,100000,0];
+store(repart(cs_2b_geoprof_lidar_i1, <height:int64> [lat=-900000:900000,10,0,lon=-1800000:1800000,10,0,y=1900:*,1,0,d=1:366,1,0,t=0:86400000,100000,0]), cs_2b_geoprof_lidar_test1);
+
+cross_join(subarray(cs_2b_geoprof_lidar, -351239, -1800000, 2007, 1, 0, 351276, 1800000, 2007, 32, 86399000) as c, trmm_1c21 as t, c.y, t.y, c.d, t.d, c.t, t.t);
+
+cross_join(subarray(cs_2b_geoprof_lidar, -40000 as c, trmm_1c21 as t, c.y, t.y, c.d, t.d, c.t, t.t);
+
+AFL% dimensions(cs_2b_geoprof_lidar);
+[("lat",-900000,1800001,10000,100,-818260,818256,"int64"),("lon",-1800000,3600001,10000,100,-1800000,1800000,"int64"),("y",1900,4611686018427387903,1,0,2007,2007,"int64"),("d",1,366,1,0,1,32,"int64"),("t",0,86400001,100000,0,0,86399992,"int64")]
+AFL% dimensions(trmm_1c21);
+[("lat",-900000,1800001,10000,100,-351239,351276,"int64"),("lon",-1800000,3600001,10000,100,-1800000,1800000,"int64"),("y",1900,4611686018427387903,1,0,2007,2007,"int64"),("d",1,366,1,0,1,32,"int64"),("t",0,86400001,100000,0,0,86399000,"int64")]
+
+
+subarray(cs_2b_geoprof_lidar, -351239, -1800000, 2007, 1, 0, 351276, 1800000, 2007, 32, 86399000)
+create array cs_2b_geoprof_lidar_small<height:int64> [lat=-351239:351276,10000,100,lon=-1800000:1800000,10000,100,y=1900:*,1,0,d=1:366,1,0,t=0:86400000,100000,0];
